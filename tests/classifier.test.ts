@@ -447,3 +447,69 @@ describe('Ollama /v1/systemone Jev CLM Decision Engine', () => {
     }
   });
 });
+
+describe('Release & Pre-release Versioning for Thunderbird Marketplace', () => {
+  it('generates Mozilla-valid 4-part pre-release versions on PRs and monotonically increments on merge to main', async () => {
+    const { computeReleaseVersion, MOZILLA_VERSION_REGEX } = await import(
+      // @ts-expect-error -- .mjs script import
+      '../scripts/resolve-version.mjs'
+    );
+
+    // 1. PR before any stable tag exists
+    const prInitial = computeReleaseVersion({
+      baseVersion: '1.0.0',
+      gitTags: [],
+      eventName: 'pull_request',
+      refName: '12/merge',
+      prNumber: '12',
+      runNumber: '5',
+    });
+    assert.equal(prInitial.isPrerelease, true);
+    assert.equal(prInitial.manifestVersion, '0.99.12.5');
+    assert.equal(MOZILLA_VERSION_REGEX.test(prInitial.manifestVersion), true);
+    assert.equal(prInitial.releaseTag, 'v1.0.0-pr.12.5');
+    assert.equal(prInitial.channel, 'unlisted');
+
+    // 2. First merge to main cuts v1.0.0
+    const mainFirst = computeReleaseVersion({
+      baseVersion: '1.0.0',
+      gitTags: ['v1.0.0-pr.12.5'],
+      eventName: 'push',
+      refName: 'main',
+      runNumber: '6',
+    });
+    assert.equal(mainFirst.isPrerelease, false);
+    assert.equal(mainFirst.manifestVersion, '1.0.0');
+    assert.equal(mainFirst.releaseTag, 'v1.0.0');
+    assert.equal(mainFirst.channel, 'listed');
+
+    // 3. Subsequent PR after v1.0.0 is tagged -> gets 1.0.0.<runNumber>
+    const prNext = computeReleaseVersion({
+      baseVersion: '1.0.0',
+      gitTags: ['v1.0.0', 'v1.0.0-pr.12.5'],
+      eventName: 'pull_request',
+      refName: '15/merge',
+      prNumber: '15',
+      runNumber: '7',
+    });
+    assert.equal(prNext.isPrerelease, true);
+    assert.equal(prNext.manifestVersion, '1.0.0.7');
+    assert.equal(MOZILLA_VERSION_REGEX.test(prNext.manifestVersion), true);
+    assert.equal(prNext.releaseTag, 'v1.0.1-pr.15.7');
+    assert.equal(prNext.channel, 'unlisted');
+
+    // 4. Merge to main when v1.0.0 already exists auto-bumps to v1.0.1 (> 1.0.0.7)
+    const mainSecond = computeReleaseVersion({
+      baseVersion: '1.0.0',
+      gitTags: ['v1.0.0', 'v1.0.1-pr.15.7'],
+      eventName: 'push',
+      refName: 'main',
+      runNumber: '8',
+    });
+    assert.equal(mainSecond.isPrerelease, false);
+    assert.equal(mainSecond.manifestVersion, '1.0.1');
+    assert.equal(mainSecond.releaseTag, 'v1.0.1');
+    assert.equal(mainSecond.channel, 'listed');
+  });
+});
+

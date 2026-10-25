@@ -13,7 +13,9 @@
     "watch": "node scripts/build.mjs --watch",
     "dev": "node scripts/build.mjs --serve --watch",
     "test": "node scripts/test.mjs",
-    "publish:addons": "node scripts/publish-addons.mjs"
+    "version:resolve": "node scripts/resolve-version.mjs",
+    "publish:addons": "node scripts/publish-addons.mjs",
+    "publish:addons:prerelease": "node scripts/publish-addons.mjs --prerelease"
   },
   "keywords": [
     "kestrel",

@@ -1,28 +1,37 @@
-name: CI — Build, Typecheck & Test
+name: CI — Build, Test & PR Pre-release
 
 on:
-  push:
-    branches: [main, master]
   pull_request:
     branches: [main, master]
 
+permissions:
+  contents: write
+
 jobs:
-  build-and-test:
-    name: Build & Test (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+  build-test-prerelease:
+    name: Build, Test & Pre-release (Ubuntu)
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/checkout@v5
         with:
-          node-version: '22'
+          fetch-depth: 0
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Resolve PR pre-release version
+        id: version
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          AMO_PRERELEASE_CHANNEL: ${{ vars.AMO_PRERELEASE_CHANNEL || 'unlisted' }}
+        run: node scripts/resolve-version.mjs
 
       - name: Install dependencies
         run: npm install
@@ -37,9 +46,33 @@ jobs:
         run: npm run build
 
       - name: Upload kestrel.xpi artifact
-        if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
-          name: kestrel-xpi
+          name: kestrel-xpi-${{ steps.version.outputs.release_tag }}
           path: kestrel.xpi
           retention-days: 14
+
+      - name: Cut GitHub Pre-release for Pull Request
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.version.outputs.release_tag }}
+          name: Pre-release ${{ steps.version.outputs.release_tag }} (PR #${{ github.event.pull_request.number }})
+          prerelease: true
+          generate_release_notes: true
+          target_commitish: ${{ github.event.pull_request.head.sha }}
+          files: kestrel.xpi
+
+      - name: Push pre-release to Thunderbird Add-ons Marketplace
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER || secrets.ATN_API_KEY }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET || secrets.ATN_API_SECRET }}
+          AMO_CHANNEL: ${{ steps.version.outputs.channel }}
+          PRERELEASE: 'true'
+          ADDONS_SERVER_URL: ${{ vars.ADDONS_SERVER_URL || 'https://addons.thunderbird.net' }}
+        run: |
+          if [ -z "$AMO_JWT_ISSUER" ] || [ -z "$AMO_JWT_SECRET" ]; then
+            echo "⚠️ Skipping Marketplace pre-release upload: AMO_JWT_ISSUER and AMO_JWT_SECRET repository secrets are not set."
+            exit 0
+          fi
+          npm run publish:addons -- --prerelease

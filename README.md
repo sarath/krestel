@@ -70,20 +70,24 @@ npm test
 
 ---
 
-## 📦 Automated GitHub Actions & Mozilla / Thunderbird Marketplace Publishing
+## 📦 Automated GitHub Actions & Thunderbird Marketplace Publishing
 
-This repository includes two GitHub Actions workflows:
-1. **[`.github/workflows/ci.yml`](.github/workflows/ci.yml)**: Runs `npm run typecheck`, `npm test`, and `npm run build` across Ubuntu, macOS, and Windows on every push and pull request, uploading `kestrel.xpi` as a build artifact.
-2. **[`.github/workflows/release.yml`](.github/workflows/release.yml)**: Triggers automatically when you push a version tag (e.g., `git tag v1.0.1 && git push origin v1.0.1`) or manually via **Actions → Release**:
-   - Syncs `manifest.json` and `package.json` to the tag version.
-   - Builds and attaches `kestrel.xpi` to a **GitHub Release**.
-   - Submits `kestrel.xpi` to the **Thunderbird Add-ons Marketplace (`addons.thunderbird.net`)** or **Mozilla Add-ons (`addons.mozilla.org`)** via [`scripts/publish-addons.mjs`](scripts/publish-addons.mjs).
+This repository includes two GitHub Actions workflows running on **`ubuntu-24.04`** with **Node.js 24**:
+1. **[`.github/workflows/ci.yml`](.github/workflows/ci.yml) (Pull Requests → Pre-release)**:
+   - Runs `npm run typecheck`, `npm test`, and `npm run build` on a single portable `ubuntu-24.04` runner.
+   - Automatically stamps a Mozilla-valid 4-part numeric pre-release version in `manifest.json` (via [`scripts/resolve-version.mjs`](scripts/resolve-version.mjs)), cuts a **GitHub Pre-release** (`vX.Y.Z-pr.<PR>.<run>`), and pushes the pre-release `.xpi` (`channel=unlisted` by default) to **Thunderbird's Add-ons Marketplace (`addons.thunderbird.net`)**.
+2. **[`.github/workflows/release.yml`](.github/workflows/release.yml) (Merge to `main` / Tag / Manual Dispatch → Release)**:
+   - Triggers automatically whenever a PR is merged (pushed) to `main`/`master`, on `v*.*.*` tags, or manually via **Actions → Release** (with an option for `prerelease: true/false`).
+   - Automatically resolves the next release version (`vX.Y.Z`), creates a **GitHub Release** with `kestrel.xpi`, and publishes the release (`channel=listed` by default) to the **Thunderbird Add-ons Marketplace (`addons.thunderbird.net`)** via [`scripts/publish-addons.mjs`](scripts/publish-addons.mjs).
 
 ### Required Repository Secrets for Marketplace Publishing
-In your GitHub repository (**Settings → Secrets and variables → Actions**), add your API credentials from [Thunderbird Add-on Developer Hub](https://addons.thunderbird.net/en-US/developers/addon/api/key/) (or [Mozilla Add-on Developer Hub](https://addons.mozilla.org/en-US/developers/addon/api/key/)):
-- `AMO_JWT_ISSUER`: Your JWT Issuer (`user:...`)
-- `AMO_JWT_SECRET`: Your JWT Secret (`...`)
-- *(Optional Repository Variable)* `ADDONS_SERVER_URL`: Defaults to `https://addons.thunderbird.net` (set to `https://addons.mozilla.org` if targeting AMO).
+In your GitHub repository (**Settings → Secrets and variables → Actions**), add your API credentials from [Thunderbird Add-on Developer Hub](https://addons.thunderbird.net/en-US/developers/addon/api/key/):
+- `AMO_JWT_ISSUER` (or `ATN_API_KEY`): Your JWT Issuer (`user:...`)
+- `AMO_JWT_SECRET` (or `ATN_API_SECRET`): Your JWT Secret (`...`)
+- *(Optional Repository Variables)*:
+  - `ADDONS_SERVER_URL`: Defaults to `https://addons.thunderbird.net` (set to `https://addons.mozilla.org` if targeting AMO).
+  - `AMO_CHANNEL`: Release channel for `main` merges (defaults to `listed`).
+  - `AMO_PRERELEASE_CHANNEL`: Pre-release channel for PR builds (defaults to `unlisted`).
 
 ---
 
