@@ -1,17 +1,24 @@
-name: Release & Publish to Mozilla / Thunderbird Add-ons Marketplace
+name: Release & Publish to Thunderbird Add-ons Marketplace
 
 on:
   push:
+    branches: [main, master]
     tags:
       - 'v*.*.*'
   workflow_dispatch:
     inputs:
-      channel:
-        description: 'Marketplace release channel (listed or unlisted)'
+      prerelease:
+        description: 'Publish as a pre-release version'
         required: false
-        default: 'listed'
+        default: false
+        type: boolean
+      channel:
+        description: 'Thunderbird Marketplace channel (auto = listed for release, unlisted for pre-release)'
+        required: false
+        default: 'auto'
         type: choice
         options:
+          - auto
           - listed
           - unlisted
       addons_server_url:
@@ -24,31 +31,31 @@ permissions:
 
 jobs:
   release:
-    name: Build XPI, Create GitHub Release & Publish to Marketplace
-    runs-on: ubuntu-latest
+    name: Build XPI, Cut Release & Publish to Thunderbird Marketplace
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/checkout@v5
         with:
-          node-version: '22'
+          fetch-depth: 0
 
-      - name: Sync version from Git tag into manifest.json & package.json
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          node -e '
-            const fs = require("node:fs");
-            const tagVer = process.env.GITHUB_REF_NAME.replace(/^v/, "");
-            for (const file of ["manifest.json", "package.json"]) {
-              const data = JSON.parse(fs.readFileSync(file, "utf8"));
-              data.version = tagVer;
-              fs.writeFileSync(file, JSON.stringify(data, null, 2) + "\n");
-            }
-            console.log("Synced version to", tagVer);
-          '
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Resolve release version & sync manifest.json / package.json
+        id: version
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          INPUT_PRERELEASE: ${{ inputs.prerelease }}
+          INPUT_CHANNEL: ${{ inputs.channel }}
+          AMO_CHANNEL: ${{ vars.AMO_CHANNEL || 'listed' }}
+          AMO_PRERELEASE_CHANNEL: ${{ vars.AMO_PRERELEASE_CHANNEL || 'unlisted' }}
+        run: node scripts/resolve-version.mjs
 
       - name: Install dependencies
         run: npm install
@@ -61,18 +68,28 @@ jobs:
       - name: Build unpacked extension & kestrel.xpi
         run: npm run build
 
-      - name: Create GitHub Release with kestrel.xpi
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+      - name: Upload kestrel.xpi artifact
+        uses: actions/upload-artifact@v6
         with:
-          files: kestrel.xpi
-          generate_release_notes: true
+          name: kestrel-xpi-${{ steps.version.outputs.release_tag }}
+          path: kestrel.xpi
+          retention-days: 30
 
-      - name: Publish kestrel.xpi to Mozilla / Thunderbird Add-ons Marketplace
+      - name: Create GitHub Release with kestrel.xpi
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.version.outputs.release_tag }}
+          name: Kestrel ${{ steps.version.outputs.release_tag }}
+          prerelease: ${{ steps.version.outputs.is_prerelease == 'true' }}
+          generate_release_notes: true
+          files: kestrel.xpi
+
+      - name: Publish kestrel.xpi to Thunderbird Add-ons Marketplace
         env:
-          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
-          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
-          AMO_CHANNEL: ${{ inputs.channel || 'listed' }}
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER || secrets.ATN_API_KEY }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET || secrets.ATN_API_SECRET }}
+          AMO_CHANNEL: ${{ steps.version.outputs.channel }}
+          PRERELEASE: ${{ steps.version.outputs.is_prerelease }}
           ADDONS_SERVER_URL: ${{ inputs.addons_server_url || vars.ADDONS_SERVER_URL || 'https://addons.thunderbird.net' }}
         run: |
           if [ -z "$AMO_JWT_ISSUER" ] || [ -z "$AMO_JWT_SECRET" ]; then
