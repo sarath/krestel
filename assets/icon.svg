@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1565c0" />
+      <stop offset="100%" stop-color="#6a1b9a" />
+    </linearGradient>
+    <linearGradient id="boltGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffee58" />
+      <stop offset="100%" stop-color="#ff9800" />
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#bgGrad)" />
+  <!-- Tag Silhouette -->
+  <path
+    d="M30 42 C30 35.37 35.37 30 42 30 L68 30 C71.18 30 74.23 31.26 76.48 33.52 L98.48 55.52 C103.17 60.2 103.17 67.8 98.48 72.48 L72.48 98.48 C67.8 103.17 60.2 103.17 55.52 98.48 L33.52 76.48 C31.26 74.23 30 71.18 30 68 Z"
+    fill="rgba(255,255,255,0.16)"
+    stroke="#ffffff"
+    stroke-width="5"
+    stroke-linejoin="round"
+  />
+  <circle cx="46" cy="46" r="6" fill="#ffffff" />
+  <!-- System-1 Lightning Bolt -->
+  <path
+    d="M72 34 L48 68 L65 68 L58 96 L86 60 L68 60 Z"
+    fill="url(#boltGrad)"
+    stroke="#1a237e"
+    stroke-width="2.5"
+    stroke-linejoin="round"
+  />
+</svg>

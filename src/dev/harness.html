@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kestrel — Local Thunderbird Dev Harness &amp; 100k Simulator</title>
+    <link rel="stylesheet" href="harness.css" />
+  </head>
+  <body>
+    <header class="dev-topbar">
+      <div class="topbar-brand">
+        <span class="brand-badge">⚡ Kestrel Dev Harness</span>
+        <span class="brand-sub">
+          Live Thunderbird MailExtension Simulator • Jev System-1 CLM (<code>/v1/systemone</code> + Hybrid Local NB/BM25) • Continual 3-Example Tag Learning
+        </span>
+      </div>
+      <div class="topbar-right">
+        <span id="dev-badge-mirror" class="tb-badge-pill">Toolbar Badge: idle</span>
+        <button id="btn-sim-incoming" class="dev-btn dev-btn-accent">
+          📨 Simulate Incoming Email (onNewMailReceived)
+        </button>
+        <button id="btn-reset-sim" class="dev-btn dev-btn-ghost">
+          ↺ Reset Simulated Inbox
+        </button>
+      </div>
+    </header>
+
+    <div class="dev-workspace">
+      <!-- LEFT PANE: Simulated Thunderbird Client (Folders + Message List + Interactive Tagging) -->
+      <section class="tb-simulator">
+        <!-- Folder Switcher & Interactive Learning Bar -->
+        <div class="tb-toolbar">
+          <div class="folder-tabs" id="folder-tabs">
+            <button class="folder-tab active" data-folder-id="fld_inbox">
+              📥 Inbox <span class="cnt" id="cnt-inbox">30</span>
+            </button>
+            <button class="folder-tab" data-folder-id="fld_archive_1k">
+              🗂️ Work Archive <span class="cnt">1,000</span>
+            </button>
+            <button class="folder-tab" data-folder-id="fld_archive_100k">
+              🚀 Mega Archive <span class="cnt">100,000</span>
+            </button>
+          </div>
+
+          <div class="learning-bar">
+            <span class="learning-label">
+              🎓 Quick User Tag Palette (non-<code>k1:</code> tags train after 3 examples; click applied tag on email to remove &amp; test negative feedback):
+            </span>
+            <div class="user-tag-palette" id="user-tag-palette"></div>
+            <div class="custom-user-tag-add">
+              <input
+                type="text"
+                id="input-custom-user-tag"
+                placeholder="New user tag (e.g. legal_review)"
+              />
+              <button id="btn-add-user-tag" class="dev-btn dev-btn-sm">+ Add User Tag</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Context Actions Bar -->
+        <div class="tb-action-strip">
+          <div class="strip-left">
+            <label class="select-all-label">
+              <input type="checkbox" id="chk-select-all" />
+              Select Visible
+            </label>
+            <span id="selected-count-text" class="muted-sm">3 messages selected</span>
+            <button id="btn-ctx-classify-selected" class="dev-btn dev-btn-sm">
+              ⚡ Classify Selected
+            </button>
+            <button id="btn-ctx-force-selected" class="dev-btn dev-btn-sm">
+              🔄 Force Re-apply Selected
+            </button>
+            <button id="btn-ctx-learn-folder" class="dev-btn dev-btn-sm">
+              🎓 Harvest Learned Tags from Folder
+            </button>
+          </div>
+          <div class="strip-right">
+            <span id="last-event-toast" class="event-toast">
+              Ready — Tag 3 emails with <code>tax_2026</code> or <code>client_acme</code> to activate Continual Learning!
+            </span>
+          </div>
+        </div>
+
+        <!-- Simulated Thunderbird Message Table -->
+        <div class="tb-message-table-wrap">
+          <table class="tb-message-table">
+            <thead>
+              <tr>
+                <th style="width: 32px">Sel</th>
+                <th style="width: 210px">From (Author)</th>
+                <th>Subject &amp; Body Preview</th>
+                <th style="width: 280px">Applied Tags (Click × to remove / penalize)</th>
+                <th style="width: 210px">+ Apply User Tag (Train CLM)</th>
+              </tr>
+            </thead>
+            <tbody id="tb-message-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- RIGHT PANE: Real Extension Popup & Options Studio -->
+      <aside class="ext-inspector">
+        <div class="inspector-tabs">
+          <button class="insp-tab active" data-pane="popup">
+            ⚡ Toolbar Popup (Live Progress)
+          </button>
+          <button class="insp-tab" data-pane="options">
+            ⚙️ Full Kestrel Studio (Options &amp; Sandbox)
+          </button>
+        </div>
+
+        <div class="inspector-body">
+          <div id="pane-popup" class="insp-pane active">
+            <iframe
+              id="iframe-popup"
+              src="../popup/popup.html"
+              title="Kestrel Popup"
+            ></iframe>
+          </div>
+          <div id="pane-options" class="insp-pane">
+            <iframe
+              id="iframe-options"
+              src="../options/options.html"
+              title="Kestrel Options Studio"
+            ></iframe>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- 1. Initialize window.messenger Mock + UI Harness -->
+    <script src="harness.js"></script>
+    <!-- 2. Boot the actual MailExtension Background Script -->
+    <script src="../background.js"></script>
+  </body>
+</html>

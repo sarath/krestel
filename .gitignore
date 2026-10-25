@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build outputs & packaged artifacts
+dist/
+*.xpi
+web-ext-artifacts/
+
+# Temporary test & build files
+*.test.mjs
+*.tsbuildinfo
+
+# Logs & OS metadata
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local environment & IDE files
+.env
+.env.*
+.vscode/
+.idea/

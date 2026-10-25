@@ -1,0 +1,45 @@
+name: CI — Build, Typecheck & Test
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-and-test:
+    name: Build & Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run strict TypeScript typecheck
+        run: npm run typecheck
+
+      - name: Run unit test suite
+        run: npm test
+
+      - name: Build unpacked extension & package kestrel.xpi
+        run: npm run build
+
+      - name: Upload kestrel.xpi artifact
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kestrel-xpi
+          path: kestrel.xpi
+          retention-days: 14

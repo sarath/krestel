@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kestrel — System-1 CLM Email Classifier</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="popup-shell">
+      <!-- Top Header -->
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-icon" aria-hidden="true">⚡</div>
+          <div>
+            <div class="brand-title-row">
+              <h1>Kestrel</h1>
+              <span id="model-badge" class="model-pill" title="Active Ollama System-1 CLM Model">tev1:0.8b</span>
+            </div>
+            <div id="ollama-status-line" class="status-subline">
+              <span id="ollama-dot" class="status-dot checking"></span>
+              <span id="ollama-status-text">Checking Ollama CLM...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <label class="arrival-toggle" title="Automatically classify new emails when they arrive">
+            <input type="checkbox" id="toggle-arrival" checked />
+            <span class="toggle-track"></span>
+            <span class="toggle-label">Auto-Arrival</span>
+          </label>
+          <button id="btn-open-options" class="icon-btn" title="Open Tag Studio & CLM Settings">
+            ⚙️
+          </button>
+        </div>
+      </header>
+
+      <!-- Error / Info Banner -->
+      <div id="error-banner" class="error-banner hidden"></div>
+
+      <!-- Live Job Progress Card -->
+      <section id="job-card" class="card job-card hidden">
+        <div class="job-header">
+          <div>
+            <span id="job-state-badge" class="state-badge running">RUNNING</span>
+            <strong id="job-folder-name" class="job-folder-title">Inbox</strong>
+          </div>
+          <div class="job-controls">
+            <button id="btn-pause-resume" class="btn btn-sm btn-secondary">⏸ Pause</button>
+            <button id="btn-cancel-job" class="btn btn-sm btn-danger">✕ Stop</button>
+          </div>
+        </div>
+
+        <div class="progress-wrap">
+          <div class="progress-bar-bg">
+            <div id="job-progress-fill" class="progress-bar-fill" style="width: 0%"></div>
+          </div>
+          <div class="progress-meta">
+            <span id="job-progress-counts">0 / 0 scanned (0%)</span>
+            <span id="job-eta-text">ETA: calculating...</span>
+          </div>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-box">
+            <span class="metric-label">Classified</span>
+            <strong id="metric-classified" class="metric-val">0</strong>
+          </div>
+          <div class="metric-box">
+            <span class="metric-label">Learned</span>
+            <strong id="metric-learned" class="metric-val accent">0</strong>
+          </div>
+          <div class="metric-box">
+            <span class="metric-label">Cache Hits</span>
+            <strong id="metric-cache" class="metric-val">0</strong>
+          </div>
+          <div class="metric-box">
+            <span class="metric-label">Speed</span>
+            <strong id="metric-speed" class="metric-val">0/s</strong>
+          </div>
+        </div>
+
+        <div id="job-tag-distribution" class="tag-dist-row"></div>
+      </section>
+
+      <!-- Folder Classification Launcher -->
+      <section class="card launcher-card">
+        <div class="section-title-row">
+          <h2>Classify or Train on Folder</h2>
+          <span class="hint-text">1k–100k+ streaming CLM</span>
+        </div>
+
+        <div class="field-group">
+          <label for="folder-select" class="field-label">Target Folder</label>
+          <select id="folder-select" class="select-input">
+            <option value="">Loading folders...</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <span class="field-label">Scope Filter</span>
+          <div class="scope-segmented">
+            <label class="seg-option">
+              <input type="radio" name="scope-mode" value="all" checked />
+              <span>All Messages</span>
+            </label>
+            <label class="seg-option">
+              <input type="radio" name="scope-mode" value="unread" />
+              <span>Unread Only</span>
+            </label>
+            <label class="seg-option">
+              <input type="radio" name="scope-mode" value="recent_days" />
+              <span>Recent</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="recent-days-row" class="field-row hidden">
+          <label for="input-recent-days">Messages from last</label>
+          <select id="input-recent-days" class="select-sm">
+            <option value="7">7 days</option>
+            <option value="14">14 days</option>
+            <option value="30" selected>30 days</option>
+            <option value="90">90 days</option>
+            <option value="180">180 days</option>
+            <option value="365">1 year</option>
+          </select>
+        </div>
+
+        <!-- Force Re-apply Box -->
+        <label class="force-reapply-box" for="checkbox-force-reapply">
+          <input type="checkbox" id="checkbox-force-reapply" />
+          <div class="force-reapply-copy">
+            <div class="force-title">Force Re-apply <code>k1:</code> Tags</div>
+            <div class="force-desc">
+              Re-evaluates already tagged emails. Replaces only <code>k1:</code> tags; manual user tags are preserved &amp; used for training.
+            </div>
+          </div>
+        </label>
+
+        <div class="action-buttons-row-3">
+          <button id="btn-start-folder" class="btn btn-primary">
+            ⚡ Classify Folder
+          </button>
+          <button id="btn-learn-folder" class="btn btn-secondary" title="Scan folder for non-k1: user tags to train the model">
+            🎓 Learn Tags
+          </button>
+          <button id="btn-classify-selected" class="btn btn-secondary" title="Classify currently highlighted email(s)">
+            Tag Selected
+          </button>
+        </div>
+      </section>
+
+      <!-- Active & Learned Tags Strip -->
+      <section class="card tags-preview-card">
+        <div class="section-title-row">
+          <h2>Active <code>k1:</code> &amp; Learned Tags</h2>
+          <button id="btn-manage-tags" class="link-btn">Tag Studio →</button>
+        </div>
+        <div id="active-tags-list" class="tags-chip-wrap"></div>
+      </section>
+
+      <!-- Recent Activity Stream -->
+      <section class="card activity-card">
+        <div class="section-title-row">
+          <h2>Recent CLM Decisions</h2>
+          <span id="lifetime-counter" class="hint-text">0 total tagged</span>
+        </div>
+        <div id="activity-list" class="activity-list">
+          <div class="empty-state">No recent classifications yet. Tag any email manually (without <code>k1:</code>) to auto-train custom tags!</div>
+        </div>
+      </section>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

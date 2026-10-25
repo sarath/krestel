@@ -1,0 +1,48 @@
+{
+  "manifest_version": 2,
+  "name": "Kestrel — System-1 CLM Email Classifier",
+  "description": "Ultra-fast System-1 CLM local email classification and continual tag learning for Thunderbird powered by Ollama (/v1/systemone). Supports k1: tags, learned user tags, incoming arrival tagging, 100k+ folder streaming, memoization, and safe Force Re-apply.",
+  "version": "1.0.0",
+  "author": "Kestrel",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "kestrel@sarathonline.com",
+      "strict_min_version": "115.0"
+    }
+  },
+  "icons": {
+    "16": "assets/icon.svg",
+    "32": "assets/icon.svg",
+    "48": "assets/icon.svg",
+    "64": "assets/icon.svg",
+    "128": "assets/icon.svg"
+  },
+  "permissions": [
+    "accountsRead",
+    "messagesRead",
+    "messagesModify",
+    "messagesUpdate",
+    "messagesTags",
+    "messagesTagsList",
+    "menus",
+    "storage",
+    "webRequest",
+    "webRequestBlocking",
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "http://[::1]/*",
+    "<all_urls>"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "browser_action": {
+    "default_title": "Kestrel — Classify Emails",
+    "default_icon": "assets/icon.svg",
+    "default_popup": "popup/popup.html"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  }
+}

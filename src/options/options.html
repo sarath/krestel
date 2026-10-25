@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kestrel — System-1 CLM Studio &amp; Continual Tag Learning</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <div class="options-container">
+      <!-- Top Hero Header -->
+      <header class="page-header">
+        <div class="header-left">
+          <div class="logo-badge">⚡</div>
+          <div>
+            <h1>Kestrel Studio</h1>
+            <p class="subtitle">
+              Jev-style System-1 CLM classification (<code>/v1/systemone</code>) + Continual Learning from your manual Thunderbird tags
+            </p>
+          </div>
+        </div>
+        <div class="header-right">
+          <span id="save-toast" class="save-toast hidden">✓ Settings saved &amp; synced with Thunderbird</span>
+          <button id="btn-save-all" class="btn btn-primary btn-lg">💾 Save All Changes</button>
+        </div>
+      </header>
+
+      <div class="main-grid">
+        <!-- LEFT COLUMN: Learned User Tags + Configured k1: Tag Studio + Sandbox -->
+        <div class="col-main">
+          <!-- Continual Learned User Tags Panel -->
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>🎓 Learned User Tags (Continual Online Training)</h2>
+                <p class="panel-desc">
+                  Whenever you apply any Thunderbird tag <strong>not prefixed by <code>k1:</code></strong> to an email (or scan a folder),
+                  Kestrel automatically learns its sender patterns, domains, and topic keywords and trains the System-1 CLM to tag future matching emails with it.
+                </p>
+              </div>
+              <div class="panel-actions">
+                <button id="btn-clear-learned" class="btn btn-secondary btn-sm" title="Reset all learned user tag profiles">
+                  🗑️ Clear Learned
+                </button>
+              </div>
+            </div>
+
+            <div id="learned-tags-list" class="tags-editor-list">
+              <div class="empty-state">
+                No user tags learned yet. Simply apply any Thunderbird tag (not starting with <code>k1:</code>) to an email, or click "🎓 Learn Tags" in the toolbar popup!
+              </div>
+            </div>
+          </section>
+
+          <!-- Configured k1: Tags Panel -->
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Configured <code>k1:</code> Tag Studio</h2>
+                <p class="panel-desc">
+                  Configure the default <code>k1:</code> categories. All enabled tags are automatically created and color-synced in Thunderbird.
+                  During <strong>Force Re-apply</strong>, only these <code>k1:</code> tags are replaced — your manual tags are always preserved.
+                </p>
+              </div>
+              <div class="panel-actions">
+                <button id="btn-sync-tb-tags" class="btn btn-secondary btn-sm" title="Force sync tag names & colors to Thunderbird now">
+                  🔄 Sync to Thunderbird
+                </button>
+                <button id="btn-reset-tags" class="btn btn-secondary btn-sm">
+                  ↺ Reset Defaults
+                </button>
+              </div>
+            </div>
+
+            <!-- Add New Custom k1: Tag Bar -->
+            <div class="new-tag-box">
+              <h3>+ Add New Custom <code>k1:</code> Tag</h3>
+              <div class="new-tag-grid">
+                <div>
+                  <label class="field-label">Tag Name (auto-prefixed with <code>k1:</code>)</label>
+                  <input type="text" id="new-tag-name" class="text-input" placeholder="e.g. VIP Client, Legal, Travel" />
+                </div>
+                <div>
+                  <label class="field-label">Color</label>
+                  <input type="color" id="new-tag-color" class="color-input" value="#00897b" />
+                </div>
+                <div class="span-2">
+                  <label class="field-label">System-1 CLM Criteria Description</label>
+                  <input
+                    type="text"
+                    id="new-tag-desc"
+                    class="text-input"
+                    placeholder="Describe what emails belong in this category..."
+                  />
+                </div>
+                <div class="span-2">
+                  <label class="field-label">Optional Fast-Path Keywords (comma-separated)</label>
+                  <input
+                    type="text"
+                    id="new-tag-keywords"
+                    class="text-input"
+                    placeholder="e.g. boarding pass, itinerary, flight confirmation"
+                  />
+                </div>
+              </div>
+              <div class="new-tag-footer">
+                <button id="btn-add-tag" class="btn btn-primary">+ Create Tag</button>
+              </div>
+            </div>
+
+            <!-- Tag Cards List -->
+            <div id="tags-editor-list" class="tags-editor-list"></div>
+          </section>
+
+          <!-- Live Sandbox Classifier & Speed Tester -->
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Live System-1 CLM Sandbox &amp; Calibrated Probabilities</h2>
+                <p class="panel-desc">
+                  Test your <code>k1:</code> and learned tags on sample emails and inspect the calibrated probability distribution.
+                </p>
+              </div>
+              <div class="panel-actions">
+                <select id="sandbox-preset" class="select-input select-sm">
+                  <option value="invoice">Sample: Stripe Invoice</option>
+                  <option value="urgent">Sample: Boss Roadmap Request</option>
+                  <option value="otp">Sample: GitHub 2FA Code</option>
+                  <option value="shipping">Sample: Package Shipped</option>
+                  <option value="newsletter">Sample: Tech Weekly Digest</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="sandbox-grid">
+              <div>
+                <label class="field-label">From (Sender)</label>
+                <input type="text" id="sandbox-author" class="text-input" value="Stripe <billing@stripe.com>" />
+              </div>
+              <div>
+                <label class="field-label">Subject</label>
+                <input type="text" id="sandbox-subject" class="text-input" value="Your invoice #4821 has been paid" />
+              </div>
+              <div class="span-2">
+                <label class="field-label">Email Snippet</label>
+                <textarea id="sandbox-snippet" class="textarea-input" rows="2">Thank you for your payment of $29.00 for your monthly subscription. View your receipt online.</textarea>
+              </div>
+            </div>
+
+            <div class="sandbox-footer">
+              <button id="btn-run-sandbox" class="btn btn-primary">⚡ Run CLM Decision Test</button>
+              <div id="sandbox-result" class="sandbox-result">
+                Click "Run CLM Decision Test" to evaluate with your active model.
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- RIGHT COLUMN: Ollama /v1/systemone CLM & 100k Performance Settings -->
+        <div class="col-side">
+          <!-- Ollama Connection & CLM Model Selector -->
+          <section class="panel">
+            <h2>Ollama System-1 CLM Engine (<code>/v1/systemone</code>)</h2>
+            <p class="panel-desc">
+              Uses Jev-style System-1 Classification Language Models (<code>tev1:0.8b</code>, <code>tev1:4b</code>, <code>nimble</code>) on Ollama's <code>/v1/systemone</code> endpoint to return calibrated choice probabilities in a single forward pass with zero output tokens.
+            </p>
+
+            <div class="form-field">
+              <label class="field-label" for="opt-endpoint">Ollama Endpoint URL</label>
+              <div class="input-with-btn">
+                <input type="text" id="opt-endpoint" class="text-input" value="http://localhost:11434" />
+                <button id="btn-test-ollama" class="btn btn-secondary">Test &amp; Scan</button>
+              </div>
+            </div>
+
+            <div id="ollama-health-box" class="health-box">
+              Checking Ollama connection...
+            </div>
+
+            <div class="form-field">
+              <label class="field-label" for="opt-installed-models">Installed Local Models</label>
+              <select id="opt-installed-models" class="select-input">
+                <option value="">Scanning local Ollama models...</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label class="field-label" for="opt-model">Active CLM Model Name</label>
+              <input
+                type="text"
+                id="opt-model"
+                class="text-input"
+                placeholder="e.g. tev1:0.8b, tev1:4b, nimble, jev"
+              />
+            </div>
+
+            <!-- Recommended System-1 CLM Models Quick Puller -->
+            <div class="recommended-models-box">
+              <div class="rec-header">
+                <span class="field-label">Recommended Jev / System-1 CLM Models</span>
+                <span class="hint-sm">Click to select or pull</span>
+              </div>
+              <div id="recommended-models-list" class="rec-models-list"></div>
+              <div id="pull-progress-box" class="pull-progress hidden"></div>
+            </div>
+
+            <label class="check-row">
+              <input type="checkbox" id="opt-auto-learn" checked />
+              <div>
+                <strong>Continual Learning from Non-<code>k1:</code> User Tags</strong>
+                <p>Automatically learns from any manual Thunderbird tag you apply (via <code>messages.onUpdated</code> &amp; folder scans) and tags future matching emails with it.</p>
+              </div>
+            </label>
+
+            <label class="check-row">
+              <input type="checkbox" id="opt-negative-feedback" checked />
+              <div>
+                <strong>Negative Feedback on Tag Removal</strong>
+                <p>When you manually remove a <code>k1:</code> or learned tag from an email, penalize that sender/topic and purge memoized cache entries.</p>
+              </div>
+            </label>
+
+            <div class="form-row-2">
+              <div>
+                <label class="field-label" for="opt-min-learned-samples">Min Examples to Activate Learned Tag</label>
+                <input type="number" id="opt-min-learned-samples" class="text-input" min="1" max="20" step="1" value="3" />
+              </div>
+              <div>
+                <label class="field-label" for="opt-keep-alive">Keep Model in RAM</label>
+                <select id="opt-keep-alive" class="select-input">
+                  <option value="5m">5 minutes</option>
+                  <option value="15m">15 minutes</option>
+                  <option value="30m" selected>30 minutes</option>
+                  <option value="2h">2 hours</option>
+                  <option value="-1">Keep loaded forever (-1)</option>
+                </select>
+              </div>
+            </div>
+
+            <label class="check-row">
+              <input type="checkbox" id="opt-classify-arrival" checked />
+              <div>
+                <strong>Auto-Classify When New Email Arrives</strong>
+                <p>Automatically tags incoming messages in real time via <code>onNewMailReceived</code>.</p>
+              </div>
+            </label>
+
+            <div class="form-row-3">
+              <div>
+                <label class="field-label" for="opt-clm-threshold">Primary Confidence</label>
+                <input type="number" id="opt-clm-threshold" class="text-input" min="0.05" max="0.95" step="0.05" value="0.25" />
+              </div>
+              <div>
+                <label class="field-label" for="opt-clm-sec-threshold">2nd Tag Confidence</label>
+                <input type="number" id="opt-clm-sec-threshold" class="text-input" min="0.05" max="0.95" step="0.05" value="0.18" />
+              </div>
+              <div>
+                <label class="field-label" for="opt-max-tags">Max Tags / Email</label>
+                <select id="opt-max-tags" class="select-input">
+                  <option value="1">1 Tag</option>
+                  <option value="2" selected>Up to 2 Tags</option>
+                  <option value="3">Up to 3 Tags</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <!-- 100k+ Email Performance & Memoization -->
+          <section class="panel">
+            <h2>100,000+ Inbox Performance Tuning</h2>
+            <p class="panel-desc">
+              Streaming pagination, single-pass CLM scoring, and header-level memoization allow 100k-email folders to run smoothly without high memory usage.
+            </p>
+
+            <div class="form-field">
+              <label class="field-label" for="opt-prompt-mode">CLM State Context Mode</label>
+              <select id="opt-prompt-mode" class="select-input">
+                <option value="compact_snippet" selected>
+                  Compact Snippet (Subject + Sender + Clean Text Snippet) — Recommended
+                </option>
+                <option value="headers_only">
+                  Headers Only (Subject + Sender only, Zero MIME I/O) — Fastest for 100k+
+                </option>
+                <option value="extended_snippet">
+                  Extended Snippet (Up to 800 chars of body)
+                </option>
+              </select>
+            </div>
+
+            <div class="form-row-3">
+              <div>
+                <label class="field-label" for="opt-snippet-chars">Snippet Chars</label>
+                <input type="number" id="opt-snippet-chars" class="text-input" min="100" max="1200" step="20" value="380" />
+              </div>
+              <div>
+                <label class="field-label" for="opt-batch-size">Worker Batch Size</label>
+                <input type="number" id="opt-batch-size" class="text-input" min="1" max="12" value="5" />
+              </div>
+              <div>
+                <label class="field-label" for="opt-concurrency">Concurrency</label>
+                <input type="number" id="opt-concurrency" class="text-input" min="1" max="8" value="3" />
+              </div>
+            </div>
+
+            <label class="check-row">
+              <input type="checkbox" id="opt-thread-memo" checked />
+              <div>
+                <strong>Thread Memoization</strong>
+                <p>Reuses tags for replies/forwards in the same conversation thread at the header level (0ms).</p>
+              </div>
+            </label>
+
+            <label class="check-row">
+              <input type="checkbox" id="opt-sender-memo" checked />
+              <div>
+                <strong>Automated &amp; Newsletter Sender Memoization</strong>
+                <p>Memoizes single-purpose automated senders after consistent classifications; automatically bypasses multi-category senders.</p>
+              </div>
+            </label>
+
+            <label class="check-row">
+              <input type="checkbox" id="opt-fast-path" />
+              <div>
+                <strong>Deterministic Fast-Path Keyword Rules</strong>
+                <p>Instantly applies tags without calling Ollama when a tag's fast-path keywords match.</p>
+              </div>
+            </label>
+
+            <div class="cache-stats-bar">
+              <div>
+                <strong id="memo-stats-text">0 threads • 0 senders cached (0 hits)</strong>
+              </div>
+              <button id="btn-clear-cache" class="btn btn-secondary btn-sm">Clear Cache</button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <script src="options.js"></script>
+  </body>
+</html>

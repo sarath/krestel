@@ -1,0 +1,33 @@
+{
+  "name": "kestrel-thunderbird",
+  "version": "1.0.0",
+  "description": "Kestrel — Jev-style System-1 CLM Email Classifier (/v1/systemone) and Continual Tag Learner for Mozilla Thunderbird (scales from 1k to 100k+ emails)",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "dev": "node scripts/build.mjs --serve --watch",
+    "test": "node scripts/test.mjs",
+    "publish:addons": "node scripts/publish-addons.mjs"
+  },
+  "keywords": [
+    "kestrel",
+    "thunderbird",
+    "mailextension",
+    "ollama",
+    "systemone",
+    "clm",
+    "jev",
+    "email-classifier",
+    "continual-learning"
+  ],
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.2"
+  }
+}

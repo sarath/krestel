@@ -1,0 +1,82 @@
+name: Release & Publish to Mozilla / Thunderbird Add-ons Marketplace
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: 'Marketplace release channel (listed or unlisted)'
+        required: false
+        default: 'listed'
+        type: choice
+        options:
+          - listed
+          - unlisted
+      addons_server_url:
+        description: 'Add-ons Marketplace Server URL (Thunderbird ATN or Mozilla AMO)'
+        required: false
+        default: 'https://addons.thunderbird.net'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build XPI, Create GitHub Release & Publish to Marketplace
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Sync version from Git tag into manifest.json & package.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const tagVer = process.env.GITHUB_REF_NAME.replace(/^v/, "");
+            for (const file of ["manifest.json", "package.json"]) {
+              const data = JSON.parse(fs.readFileSync(file, "utf8"));
+              data.version = tagVer;
+              fs.writeFileSync(file, JSON.stringify(data, null, 2) + "\n");
+            }
+            console.log("Synced version to", tagVer);
+          '
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run TypeScript typecheck & unit tests
+        run: |
+          npm run typecheck
+          npm test
+
+      - name: Build unpacked extension & kestrel.xpi
+        run: npm run build
+
+      - name: Create GitHub Release with kestrel.xpi
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: kestrel.xpi
+          generate_release_notes: true
+
+      - name: Publish kestrel.xpi to Mozilla / Thunderbird Add-ons Marketplace
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+          AMO_CHANNEL: ${{ inputs.channel || 'listed' }}
+          ADDONS_SERVER_URL: ${{ inputs.addons_server_url || vars.ADDONS_SERVER_URL || 'https://addons.thunderbird.net' }}
+        run: |
+          if [ -z "$AMO_JWT_ISSUER" ] || [ -z "$AMO_JWT_SECRET" ]; then
+            echo "⚠️ Skipping Marketplace upload: AMO_JWT_ISSUER and AMO_JWT_SECRET repository secrets are not set."
+            exit 0
+          fi
+          npm run publish:addons
